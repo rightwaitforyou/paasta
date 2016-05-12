@@ -54,6 +54,7 @@ from paasta_tools import drain_lib
 from paasta_tools import marathon_tools
 from paasta_tools import monitoring_tools
 from paasta_tools.marathon_tools import kill_given_tasks
+from paasta_tools.paasta_maintenance import get_draining_hosts
 from paasta_tools.utils import _log
 from paasta_tools.utils import compose_job_id
 from paasta_tools.utils import decompose_job_id
@@ -420,9 +421,16 @@ def deploy_service(
     )
 
     if new_app_running:
+        hosts_tasks_running_on = [task.host for task in new_app.tasks]
+        draining_hosts = get_draining_hosts()
+        num_at_risk_tasks = 0
+        for host in hosts_tasks_running_on:
+            if host in draining_hosts:
+                num_at_risk_tasks += 1
+        log.debug("%s has %d tasks running on at-risk hosts." % (new_app.id, num_at_risk_tasks))
         protected_draining_tasks = set()
-        if new_app.instances < config['instances']:
-            client.scale_app(app_id=new_app.id, instances=config['instances'], force=True)
+        if new_app.instances < config['instances'] + num_at_risk_tasks:
+            client.scale_app(app_id=new_app.id, instances=config['instances'] + num_at_risk_tasks, force=True)
         elif new_app.instances > config['instances']:
             num_tasks_to_scale = max(min(len(new_app.tasks), new_app.instances) - config['instances'], 0)
             task_dict = get_old_happy_unhappy_draining_tasks_for_app(
