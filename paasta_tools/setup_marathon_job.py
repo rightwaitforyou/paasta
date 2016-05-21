@@ -340,6 +340,23 @@ def get_old_happy_unhappy_draining_tasks(other_apps, drain_method, service, nerv
     return old_app_live_happy_tasks, old_app_live_unhappy_tasks, old_app_draining_tasks
 
 
+def get_num_at_risk_tasks(app):
+    """Determine how many of an application's tasks are running on
+    at-risk (Mesos Maintenance Draining) hosts.
+
+    :param app: A marathon application
+    :returns: An integer representing the number of tasks running on at-risk hosts
+    """
+    hosts_tasks_running_on = [task.host for task in app.tasks]
+    draining_hosts = get_draining_hosts()
+    num_at_risk_tasks = 0
+    for host in hosts_tasks_running_on:
+        if host in draining_hosts:
+            num_at_risk_tasks += 1
+    log.debug("%s has %d tasks running on at-risk hosts." % (app.id, num_at_risk_tasks))
+    return num_at_risk_tasks
+
+
 def deploy_service(
     service,
     instance,
@@ -421,13 +438,7 @@ def deploy_service(
     )
 
     if new_app_running:
-        hosts_tasks_running_on = [task.host for task in new_app.tasks]
-        draining_hosts = get_draining_hosts()
-        num_at_risk_tasks = 0
-        for host in hosts_tasks_running_on:
-            if host in draining_hosts:
-                num_at_risk_tasks += 1
-        log.debug("%s has %d tasks running on at-risk hosts." % (new_app.id, num_at_risk_tasks))
+        num_at_risk_tasks = get_num_at_risk_tasks(new_app)
         protected_draining_tasks = set()
         if new_app.instances < config['instances'] + num_at_risk_tasks:
             log.debug("Scaling %s from %d to %d instances." %
