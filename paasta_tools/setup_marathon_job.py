@@ -430,6 +430,8 @@ def deploy_service(
         log.debug("%s has %d tasks running on at-risk hosts." % (new_app.id, num_at_risk_tasks))
         protected_draining_tasks = set()
         if new_app.instances < config['instances'] + num_at_risk_tasks:
+            log.debug("Scaling %s from %d to %d instances." %
+                      (new_app.id, new_app.instances, config['instances'] + num_at_risk_tasks))
             client.scale_app(app_id=new_app.id, instances=config['instances'] + num_at_risk_tasks, force=True)
         elif new_app.instances > config['instances']:
             num_tasks_to_scale = max(min(len(new_app.tasks), new_app.instances) - config['instances'], 0)
