@@ -21,6 +21,26 @@ mesosslave:
   command: 'mesos-slave --master=zk://zookeeper:2181/mesos-testcluster --resources="cpus(*):10; mem(*):512; disk(*):100" --credential=/etc/mesos-slave-secret --launcher=posix'
   hostname: mesosslave.test_hostname
 
+mesosslave2:
+  build: ../yelp_package/dockerfiles/itest/mesos/
+  ports:
+    - 5051
+  links:
+    - zookeeper
+  environment:
+    -CLUSTER: testcluster
+  command: 'mesos-slave --master=zk://zookeeper:2181/mesos-testcluster --resources="cpus(*):10; mem(*):512; disk(*):100" --credential=/etc/mesos-slave-secret --launcher=posix'
+
+mesosslave3:
+  build: ../yelp_package/dockerfiles/itest/mesos/
+  ports:
+    - 5051
+  links:
+    - zookeeper
+  environment:
+    -CLUSTER: testcluster
+  command: 'mesos-slave --master=zk://zookeeper:2181/mesos-testcluster --resources="cpus(*):10; mem(*):512; disk(*):100" --credential=/etc/mesos-slave-secret --launcher=posix'
+
 marathon:
   build: ../yelp_package/dockerfiles/itest/marathon/
   ports:
@@ -37,6 +57,8 @@ paastatools:
     - marathon
     - mesosmaster
     - mesosslave
+    - mesosslave2
+    - mesosslave3
     - zookeeper
     - chronos
     - hacheck

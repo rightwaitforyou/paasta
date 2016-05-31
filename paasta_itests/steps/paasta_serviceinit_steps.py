@@ -31,6 +31,8 @@ def run_marathon_app(context, job_id):
     app_config = {
         'id': app_id,
         'cmd': '/bin/sleep 1m',
+        'instances': 1,
+        'constraints': [["hostname", "UNIQUE"]],
     }
     with mock.patch('paasta_tools.bounce_lib.create_app_lock'):
         paasta_tools.bounce_lib.create_marathon_app(app_id, app_config, context.marathon_client)

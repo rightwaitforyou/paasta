@@ -37,6 +37,12 @@ def which_id(context, which):
 
 @given(u'a new {state} app to be deployed')
 def given_a_new_app_to_be_deployed(context, state):
+    given_a_new_app_to_be_deployed_constraints(context, state, str(None))
+
+
+@given(u'a new {state} app to be deployed with constraints {constraints}')
+def given_a_new_app_to_be_deployed_constraints(context, state, constraints):
+    constraints = eval(constraints)
     if state == "healthy":
         cmd = "/bin/true"
     elif state == "unhealthy":
@@ -57,12 +63,19 @@ def given_a_new_app_to_be_deployed(context, state):
                 "protocol": "COMMAND",
                 "command": {"value": cmd}
             }
-        ]
+        ],
+        'constraints': constraints,
     }
 
 
 @given(u'an old app to be destroyed')
 def given_an_old_app_to_be_destroyed(context):
+    given_an_old_app_to_be_destroyed_constraints(context, str([]))
+
+
+@given(u'an old app to be destroyed with constraints {constraints}')
+def given_an_old_app_to_be_destroyed_constraints(context, constraints):
+    constraints = eval(constraints)
     old_app_name = "bounce.test1.oldapp.confighash"
     context.old_ids = [old_app_name]
     context.old_app_config = {
@@ -71,6 +84,7 @@ def given_an_old_app_to_be_destroyed(context):
         'instances': 2,
         'backoff_seconds': 1,
         'backoff_factor': 1,
+        'constraints': constraints,
     }
     with contextlib.nested(
         mock.patch('paasta_tools.bounce_lib.create_app_lock'),
@@ -97,7 +111,7 @@ def when_there_are_num_which_tasks(context, num, which, state):
                 return
         time.sleep(0.5)
     raise Exception("timed out waiting for %d %s tasks on %s; there are %d" %
-                    (context.max_tasks, state, app_id, app.tasks))
+                    (context.max_tasks, state, app_id, len(app.tasks)))
 
 
 @when(u'deploy_service with bounce strategy "{bounce_method}" and drain method "{drain_method}" is initiated')
@@ -116,12 +130,14 @@ def when_deploy_service_initiated(context, bounce_method, drain_method):
         mock.patch('paasta_tools.bounce_lib.time.sleep', autospec=True),
         mock.patch('paasta_tools.setup_marathon_job.load_system_paasta_config', autospec=True),
         mock.patch('paasta_tools.setup_marathon_job._log', autospec=True),
+        mock.patch('paasta_tools.setup_marathon_job.get_draining_hosts', autospec=True),
     ) as (
         _,
         _,
         _,
         _,
         mock_load_system_paasta_config,
+        _,
         _,
     ):
         mock_load_system_paasta_config.return_value.get_cluster = mock.Mock(return_value=context.cluster)

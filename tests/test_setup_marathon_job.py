@@ -342,6 +342,7 @@ class TestSetupMarathonJob:
         fake_old_app_live_happy_tasks = {}
         fake_old_app_live_unhappy_tasks = {}
         fake_old_app_draining_tasks = {}
+        fake_old_app_at_risk_tasks = {}
         fake_service = 'fake_service'
         fake_serviceinstance = 'fake_service.fake_instance'
         self.fake_cluster = 'fake_cluster'
@@ -369,6 +370,7 @@ class TestSetupMarathonJob:
                 old_app_live_happy_tasks=fake_old_app_live_happy_tasks,
                 old_app_live_unhappy_tasks=fake_old_app_live_unhappy_tasks,
                 old_app_draining_tasks=fake_old_app_draining_tasks,
+                old_app_at_risk_tasks=fake_old_app_at_risk_tasks,
                 service=fake_service,
                 bounce_method=fake_bounce_method,
                 serviceinstance=fake_serviceinstance,
@@ -407,6 +409,7 @@ class TestSetupMarathonJob:
         fake_old_app_live_happy_tasks = {'fake_app_to_kill_1': set([fake_task_to_drain])}
         fake_old_app_live_unhappy_tasks = {'fake_app_to_kill_1': set()}
         fake_old_app_draining_tasks = {'fake_app_to_kill_1': set()}
+        fake_old_app_at_risk_tasks = {'fake_app_to_kill_1': set()}
         fake_service = 'fake_service'
         fake_serviceinstance = 'fake_service.fake_instance'
         self.fake_cluster = 'fake_cluster'
@@ -434,6 +437,7 @@ class TestSetupMarathonJob:
                 old_app_live_happy_tasks=fake_old_app_live_happy_tasks,
                 old_app_live_unhappy_tasks=fake_old_app_live_unhappy_tasks,
                 old_app_draining_tasks=fake_old_app_draining_tasks,
+                old_app_at_risk_tasks=fake_old_app_at_risk_tasks,
                 service=fake_service,
                 bounce_method=fake_bounce_method,
                 serviceinstance=fake_serviceinstance,
@@ -470,6 +474,7 @@ class TestSetupMarathonJob:
         fake_old_app_live_happy_tasks = {'fake_app_to_kill_1': set([fake_task_to_drain])}
         fake_old_app_live_unhappy_tasks = {'fake_app_to_kill_1': set([])}
         fake_old_app_draining_tasks = {'fake_app_to_kill_1': set([])}
+        fake_old_app_at_risk_tasks = {'fake_app_to_kill_1': set([])}
         fake_service = 'fake_service'
         fake_serviceinstance = 'fake_service.fake_instance'
         self.fake_cluster = 'fake_cluster'
@@ -497,6 +502,7 @@ class TestSetupMarathonJob:
                 old_app_live_happy_tasks=fake_old_app_live_happy_tasks,
                 old_app_live_unhappy_tasks=fake_old_app_live_unhappy_tasks,
                 old_app_draining_tasks=fake_old_app_draining_tasks,
+                old_app_at_risk_tasks=fake_old_app_at_risk_tasks,
                 service=fake_service,
                 bounce_method=fake_bounce_method,
                 serviceinstance=fake_serviceinstance,
@@ -533,6 +539,7 @@ class TestSetupMarathonJob:
         fake_old_app_live_happy_tasks = {'fake_app_to_kill_1': set()}
         fake_old_app_live_unhappy_tasks = {'fake_app_to_kill_1': set()}
         fake_old_app_draining_tasks = {'fake_app_to_kill_1': set()}
+        fake_old_app_at_risk_tasks = {'fake_app_to_kill_1': set()}
         fake_service = 'fake_service'
         fake_serviceinstance = 'fake_service.fake_instance'
         self.fake_cluster = 'fake_cluster'
@@ -559,6 +566,7 @@ class TestSetupMarathonJob:
                 old_app_live_happy_tasks=fake_old_app_live_happy_tasks,
                 old_app_live_unhappy_tasks=fake_old_app_live_unhappy_tasks,
                 old_app_draining_tasks=fake_old_app_draining_tasks,
+                old_app_at_risk_tasks=fake_old_app_at_risk_tasks,
                 service=fake_service,
                 bounce_method=fake_bounce_method,
                 serviceinstance=fake_serviceinstance,
@@ -599,6 +607,7 @@ class TestSetupMarathonJob:
         fake_old_app_live_happy_tasks = {}
         fake_old_app_live_unhappy_tasks = {}
         fake_old_app_draining_tasks = {}
+        fake_old_app_at_risk_tasks = {}
         fake_service = 'fake_service'
         fake_serviceinstance = 'fake_service.fake_instance'
         self.fake_cluster = 'fake_cluster'
@@ -630,6 +639,7 @@ class TestSetupMarathonJob:
                 old_app_live_happy_tasks=fake_old_app_live_happy_tasks,
                 old_app_live_unhappy_tasks=fake_old_app_live_unhappy_tasks,
                 old_app_draining_tasks=fake_old_app_draining_tasks,
+                old_app_at_risk_tasks=fake_old_app_at_risk_tasks,
                 service=fake_service,
                 bounce_method=fake_bounce_method,
                 serviceinstance=fake_serviceinstance,
@@ -668,6 +678,7 @@ class TestSetupMarathonJob:
         fake_old_app_live_happy_tasks = {'old_app': set([])}
         fake_old_app_live_unhappy_tasks = {'old_app': set(old_tasks)}
         fake_old_app_draining_tasks = {'old_app': set([])}
+        fake_old_app_at_risk_tasks = {'old_app': set([])}
         fake_service = 'fake_service'
         fake_serviceinstance = 'fake_service.fake_instance'
         self.fake_cluster = 'fake_cluster'
@@ -700,6 +711,7 @@ class TestSetupMarathonJob:
                 old_app_live_happy_tasks=fake_old_app_live_happy_tasks,
                 old_app_live_unhappy_tasks=fake_old_app_live_unhappy_tasks,
                 old_app_draining_tasks=fake_old_app_draining_tasks,
+                old_app_at_risk_tasks=fake_old_app_at_risk_tasks,
                 service=fake_service,
                 bounce_method=fake_bounce_method,
                 serviceinstance=fake_serviceinstance,
@@ -1461,7 +1473,7 @@ class TestGetOldHappyUnhappyDrainingTasks(object):
     def fake_get_happy_tasks(self, app, service, nerve_ns, system_paasta_config, **kwargs):
         return [t for t in app.tasks if t._happiness == 'happy']
 
-    def test_get_old_happy_unhappy_draining_tasks_empty(self):
+    def test_get_tasks_by_state_empty(self):
         fake_name = 'whoa'
         fake_instance = 'the_earth_is_tiny'
         fake_id = marathon_tools.format_job_id(fake_name, fake_instance)
@@ -1484,9 +1496,19 @@ class TestGetOldHappyUnhappyDrainingTasks(object):
             fake_apps[0].id: set(),
             fake_apps[1].id: set(),
         }
+        expected_at_risk_tasks = {
+            fake_apps[0].id: set(),
+            fake_apps[1].id: set(),
+        }
 
-        with mock.patch('paasta_tools.bounce_lib.get_happy_tasks', side_effect=self.fake_get_happy_tasks):
-            actual = setup_marathon_job.get_old_happy_unhappy_draining_tasks(
+        with contextlib.nested(
+            mock.patch('paasta_tools.bounce_lib.get_happy_tasks', side_effect=self.fake_get_happy_tasks),
+            mock.patch('paasta_tools.setup_marathon_job.get_draining_hosts', autospec=True),
+        ) as (
+            _,
+            _,
+        ):
+            actual = setup_marathon_job.get_tasks_by_state(
                 fake_apps,
                 self.fake_drain_method(),
                 service=fake_name,
@@ -1494,12 +1516,13 @@ class TestGetOldHappyUnhappyDrainingTasks(object):
                 bounce_health_params={},
                 system_paasta_config=fake_system_paasta_config,
             )
-        actual_live_happy_tasks, actual_live_unhappy_tasks, actual_draining_tasks = actual
+        actual_live_happy_tasks, actual_live_unhappy_tasks, actual_draining_tasks, actual_at_risk_tasks = actual
         assert actual_live_happy_tasks == expected_live_happy_tasks
         assert actual_live_unhappy_tasks == expected_live_unhappy_tasks
         assert actual_draining_tasks == expected_draining_tasks
+        assert actual_at_risk_tasks == expected_at_risk_tasks
 
-    def test_get_old_happy_unhappy_draining_tasks_not_empty(self):
+    def test_get_tasks_by_state_not_empty(self):
         fake_name = 'whoa'
         fake_instance = 'the_earth_is_tiny'
         fake_id = marathon_tools.format_job_id(fake_name, fake_instance)
@@ -1537,9 +1560,19 @@ class TestGetOldHappyUnhappyDrainingTasks(object):
             fake_apps[0].id: set([fake_apps[0].tasks[2]]),
             fake_apps[1].id: set([fake_apps[1].tasks[2]]),
         }
+        expected_at_risk_tasks = {
+            fake_apps[0].id: set(),
+            fake_apps[1].id: set(),
+        }
 
-        with mock.patch('paasta_tools.bounce_lib.get_happy_tasks', side_effect=self.fake_get_happy_tasks):
-            actual = setup_marathon_job.get_old_happy_unhappy_draining_tasks(
+        with contextlib.nested(
+            mock.patch('paasta_tools.bounce_lib.get_happy_tasks', side_effect=self.fake_get_happy_tasks),
+            mock.patch('paasta_tools.setup_marathon_job.get_draining_hosts', autospec=True),
+        ) as (
+            _,
+            _,
+        ):
+            actual = setup_marathon_job.get_tasks_by_state(
                 fake_apps,
                 self.fake_drain_method(),
                 service=fake_name,
@@ -1547,7 +1580,8 @@ class TestGetOldHappyUnhappyDrainingTasks(object):
                 bounce_health_params={},
                 system_paasta_config=fake_system_paasta_config,
             )
-        actual_live_happy_tasks, actual_live_unhappy_tasks, actual_draining_tasks = actual
+        actual_live_happy_tasks, actual_live_unhappy_tasks, actual_draining_tasks, actual_at_risk_tasks = actual
         assert actual_live_happy_tasks == expected_live_happy_tasks
         assert actual_live_unhappy_tasks == expected_live_unhappy_tasks
         assert actual_draining_tasks == expected_draining_tasks
+        assert actual_at_risk_tasks == expected_at_risk_tasks

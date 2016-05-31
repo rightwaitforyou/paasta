@@ -168,6 +168,7 @@ def do_bounce(
     old_app_live_happy_tasks,
     old_app_live_unhappy_tasks,
     old_app_draining_tasks,
+    old_app_at_risk_tasks,
     service,
     bounce_method,
     serviceinstance,
@@ -200,6 +201,7 @@ def do_bounce(
                 '%d old tasks receiving traffic and happy.' % len(bounce_lib.flatten_tasks(old_app_live_happy_tasks)),
                 '%d old tasks unhappy.' % len(bounce_lib.flatten_tasks(old_app_live_unhappy_tasks)),
                 '%d old tasks draining.' % len(bounce_lib.flatten_tasks(old_app_draining_tasks)),
+                '%d old tasks at risk.' % len(bounce_lib.flatten_tasks(old_app_at_risk_tasks)),
                 '%d old apps.' % len(old_app_live_happy_tasks.keys()),
             ]),
             level='event',
@@ -244,6 +246,11 @@ def do_bounce(
         for task in tasks:
             all_draining_tasks.add(task)
 
+    for app, tasks in old_app_at_risk_tasks.items():
+        for task in tasks:
+            all_draining_tasks.add(task)
+            drain_method.drain(task)
+
     tasks_to_kill = set()
 
     for task in all_draining_tasks:
@@ -259,8 +266,9 @@ def do_bounce(
             live_happy_tasks = old_app_live_happy_tasks[app]
             live_unhappy_tasks = old_app_live_unhappy_tasks[app]
             draining_tasks = old_app_draining_tasks[app]
+            at_risk_tasks = old_app_at_risk_tasks[app]
 
-            if 0 == len((live_happy_tasks | live_unhappy_tasks | draining_tasks) - tasks_to_kill):
+            if 0 == len((live_happy_tasks | live_unhappy_tasks | draining_tasks | at_risk_tasks) - tasks_to_kill):
                 apps_to_kill.append(app)
 
     if apps_to_kill:
@@ -277,6 +285,7 @@ def do_bounce(
     all_old_tasks = set.union(set(), *old_app_live_happy_tasks.values())
     all_old_tasks = set.union(all_old_tasks, *old_app_live_unhappy_tasks.values())
     all_old_tasks = set.union(all_old_tasks, *old_app_draining_tasks.values())
+    all_old_tasks = set.union(all_old_tasks, *old_app_at_risk_tasks.values())
 
     # log if we appear to be finished
     if all([
@@ -295,20 +304,25 @@ def do_bounce(
         )
 
 
-def get_old_happy_unhappy_draining_tasks_for_app(app, drain_method, service, nerve_ns, bounce_health_params,
-                                                 system_paasta_config):
+def get_tasks_by_state_for_app(app, drain_method, service, nerve_ns, bounce_health_params,
+                               system_paasta_config):
     tasks_by_state = {
         'happy': set(),
         'unhappy': set(),
         'draining': set(),
+        'at_risk': set(),
     }
 
     happy_tasks = bounce_lib.get_happy_tasks(app, service, nerve_ns, system_paasta_config, **bounce_health_params)
+    draining_hosts = get_draining_hosts()
     for task in app.tasks:
         if drain_method.is_draining(task):
             state = 'draining'
         elif task in happy_tasks:
-            state = 'happy'
+            if task.host in draining_hosts:
+                state = 'at_risk'
+            else:
+                state = 'happy'
         else:
             state = 'unhappy'
         tasks_by_state[state].add(task)
@@ -316,28 +330,31 @@ def get_old_happy_unhappy_draining_tasks_for_app(app, drain_method, service, ner
     return tasks_by_state
 
 
-def get_old_happy_unhappy_draining_tasks(other_apps, drain_method, service, nerve_ns, bounce_health_params,
-                                         system_paasta_config):
-    """Split tasks from old apps into 3 categories:
+def get_tasks_by_state(other_apps, drain_method, service, nerve_ns, bounce_health_params,
+                       system_paasta_config):
+    """Split tasks from old apps into 4 categories:
       - live (not draining) and happy (according to get_happy_tasks)
       - live (not draining) and unhappy
       - draining
+      - at-risk (running on a host marked draining in Mesos in preparation for maintenance)
     """
 
     old_app_live_happy_tasks = {}
     old_app_live_unhappy_tasks = {}
     old_app_draining_tasks = {}
+    old_app_at_risk_tasks = {}
 
     for app in other_apps:
 
-        tasks_by_state = get_old_happy_unhappy_draining_tasks_for_app(
+        tasks_by_state = get_tasks_by_state_for_app(
             app, drain_method, service, nerve_ns, bounce_health_params, system_paasta_config)
 
         old_app_live_happy_tasks[app.id] = tasks_by_state['happy']
         old_app_live_unhappy_tasks[app.id] = tasks_by_state['unhappy']
         old_app_draining_tasks[app.id] = tasks_by_state['draining']
+        old_app_at_risk_tasks[app.id] = tasks_by_state['at_risk']
 
-    return old_app_live_happy_tasks, old_app_live_unhappy_tasks, old_app_draining_tasks
+    return old_app_live_happy_tasks, old_app_live_unhappy_tasks, old_app_draining_tasks, old_app_at_risk_tasks
 
 
 def get_num_at_risk_tasks(app):
@@ -428,7 +445,11 @@ def deploy_service(
         log_deploy_error(errormsg)
         return (1, errormsg)
 
-    old_app_live_happy_tasks, old_app_live_unhappy_tasks, old_app_draining_tasks = get_old_happy_unhappy_draining_tasks(
+    (old_app_live_happy_tasks,
+     old_app_live_unhappy_tasks,
+     old_app_draining_tasks,
+     old_app_at_risk_tasks,
+     ) = get_tasks_by_state(
         other_apps,
         drain_method,
         service,
@@ -448,7 +469,7 @@ def deploy_service(
         # We will start by draining any tasks running on at-risk hosts.
         elif new_app.instances > config['instances']:
             num_tasks_to_scale = max(min(len(new_app.tasks), new_app.instances) - config['instances'], 0)
-            task_dict = get_old_happy_unhappy_draining_tasks_for_app(
+            task_dict = get_tasks_by_state_for_app(
                 new_app,
                 drain_method,
                 service,
@@ -459,6 +480,7 @@ def deploy_service(
             scaling_app_happy_tasks = list(task_dict['happy'])
             scaling_app_unhappy_tasks = list(task_dict['unhappy'])
             scaling_app_draining_tasks = list(task_dict['draining'])
+            scaling_app_at_risk_tasks = list(task_dict['at_risk'])
 
             tasks_to_move_draining = min(len(scaling_app_draining_tasks), num_tasks_to_scale)
             old_app_draining_tasks[new_app.id] = set(scaling_app_draining_tasks[:tasks_to_move_draining])
@@ -468,6 +490,10 @@ def deploy_service(
             tasks_to_move_unhappy = min(len(scaling_app_unhappy_tasks), num_tasks_to_scale)
             old_app_live_unhappy_tasks[new_app.id] = set(scaling_app_unhappy_tasks[:tasks_to_move_unhappy])
             num_tasks_to_scale = num_tasks_to_scale - tasks_to_move_unhappy
+
+            tasks_to_move_at_risk = min(len(scaling_app_at_risk_tasks), num_tasks_to_scale)
+            old_app_at_risk_tasks[new_app.id] = set(scaling_app_at_risk_tasks[:tasks_to_move_at_risk])
+            num_tasks_to_scale = num_tasks_to_scale - tasks_to_move_at_risk
 
             tasks_to_move_happy = min(len(scaling_app_happy_tasks), num_tasks_to_scale)
             old_app_live_happy_tasks[new_app.id] = set(scaling_app_happy_tasks[:tasks_to_move_happy])
@@ -504,6 +530,7 @@ def deploy_service(
                     old_app_live_happy_tasks=old_app_live_happy_tasks,
                     old_app_live_unhappy_tasks=old_app_live_unhappy_tasks,
                     old_app_draining_tasks=old_app_draining_tasks,
+                    old_app_at_risk_tasks=old_app_at_risk_tasks,
                     service=service,
                     bounce_method=bounce_method,
                     serviceinstance=serviceinstance,
