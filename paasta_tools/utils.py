@@ -445,17 +445,17 @@ LOG_COMPONENTS = {
         'help': 'Logs from Chronos for the service',
         'command': 'NA - TODO log chronos stuff.',
     },
+    'app_output': {
+        'color': PaastaColors.yellow,
+        'help': 'Stderr and stdout of the actual process spawned by Mesos',
+        'command': 'NA - PAASTA-78',
+    },
     # I'm leaving these planned components here since they provide some hints
     # about where we want to go. See PAASTA-78.
     #
     # But I'm commenting them out so they don't delude users into believing we
     # can expose logs that we cannot actually expose. See PAASTA-927.
     #
-    # 'app_output': {
-    #     'color': PaastaColors.bold,
-    #     'help': 'Stderr and stdout of the actual process spawned by Mesos',
-    #     'command': 'NA - PAASTA-78',
-    # },
     # 'app_request': {
     #     'color': PaastaColors.bold,
     #     'help': 'The request log for the service. Defaults to "service_NAME_requests"',

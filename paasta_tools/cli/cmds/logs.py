@@ -32,6 +32,9 @@ try:
 except ImportError:
     scribereader = None
 
+import textwrap
+import pytimeparse
+
 from paasta_tools import chronos_tools
 from paasta_tools.marathon_tools import format_job_id
 from paasta_tools.cli.utils import figure_out_service_name
@@ -81,7 +84,7 @@ def add_subparser(subparsers):
         help=cluster_help,
     ).completer = completer_clusters
     status_parser.add_argument(
-        '-f', '-F', '--tail', dest='tail', action='store_true', default=True,
+        '-f', '-F', '--tail', dest='tail', action='store_true', default=False,
         help='Stream the logs and follow it for more data',
     )
     status_parser.add_argument(
@@ -91,7 +94,7 @@ def add_subparser(subparsers):
     status_parser.add_argument(
         '-r', '--raw-mode', action='store_true',
         dest='raw_mode', default=False,
-        help="Don't pretty-print logs; emit them exactly as they are in scribe."
+        help="Don't pretty-print logs; emit them exactly as they are in scribe",
     )
     status_parser.add_argument(
         '-d', '--soa-dir',
@@ -99,6 +102,17 @@ def add_subparser(subparsers):
         metavar="SOA_DIR",
         default=DEFAULT_SOA_DIR,
         help="define a different soa config directory",
+    )
+    status_parser.add_argument(
+        '-a', '--ago', dest='time_ago',
+        help='How long ago to get logs from, uses friendly durations like 32m or 1w. Defaults to 30 minutes',
+        default='30m',
+    )
+    status_parser.add_argument(
+        '-t', '--time', dest='time',
+        help='The timestamp that -a/--ago gets the logs relative to. In ISO-8601 format. Defaults to right now. '
+             'For example: --time 2016-06-02T13:00:00 --ago 1d '
+             'would give you logs from 1st June at 1pm up till 2nd June at 1pm'
     )
     default_component_string = ','.join(DEFAULT_COMPONENTS)
     component_descriptions = build_component_descriptions(LOG_COMPONENTS)
@@ -331,13 +345,15 @@ class LogReader(object):
     def __init__(self, **kwargs):
         pass
 
-    def tail_logs(service, levels, components, clusters, raw_mode=False):
+    def tail_logs(self, service, levels, components, clusters, raw_mode=False):
         raise NotImplementedError("tail_logs is not implemented")
 
 
 @register_log_reader('scribereader')
 class ScribeLogReader(LogReader):
     def __init__(self, cluster_map, **kwargs):
+        super(ScribeLogReader, self).__init__(**kwargs)
+
         if scribereader is None:
             raise Exception("scribereader package must be available to use scribereader log reading backend")
         self.cluster_map = cluster_map
@@ -348,7 +364,7 @@ class ScribeLogReader(LogReader):
         NOTE: This function spawns concurrent processes and doesn't necessarily
         worry about cleaning them up! That's because we expect to just exit the
         main process when this function returns (as main() does). Someone calling
-        this function directly with something like "while True: tail_paasta_logs()"
+        this function directly with something like "while TrBue: tail_paasta_logs()"
         may be very sad.
 
         NOTE: We try pretty hard to supress KeyboardInterrupts to prevent big
